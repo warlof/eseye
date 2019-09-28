@@ -3,7 +3,7 @@
 /*
  * This file is part of SeAT
  *
- * Copyright (C) 2015, 2016, 2017  Leon Jacobs
+ * Copyright (C) 2015, 2016, 2017, 2018, 2019  Leon Jacobs
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,6 +47,8 @@ class FileCache implements CacheInterface
 
     /**
      * FileCache constructor.
+     * @throws \Seat\Eseye\Exceptions\CachePathException
+     * @throws \Seat\Eseye\Exceptions\InvalidContainerDataException
      */
     public function __construct()
     {
@@ -88,10 +90,19 @@ class FileCache implements CacheInterface
 
             if (! chmod($this->getCachePath(), 0775))
                 throw new CachePathException(
-                    $this->cache_path . ' must be readable and writeable');
+                    $this->cache_path . ' must be readable and writable');
         }
 
         return true;
+    }
+
+    /**
+     * @return string
+     */
+    public function getCachePath(): string
+    {
+
+        return $this->cache_path;
     }
 
     /**
@@ -108,7 +119,7 @@ class FileCache implements CacheInterface
 
         // Create the subpath if that does not already exist
         if (! file_exists($path))
-            mkdir($path, 0775, true);
+            @mkdir($path, 0775, true);
 
         // Dump the contents to file
         file_put_contents($path . $this->results_filename, serialize($data));
@@ -176,8 +187,8 @@ class FileCache implements CacheInterface
         // Get the data from the file and unserialize it
         $file = unserialize(file_get_contents($cache_file_path));
 
-        // If the cached entry is expired, remove it.
-        if ($file->expired()) {
+        // If the cached entry is expired and does not have any ETag, remove it.
+        if ($file->expired() && ! $file->hasHeader('ETag')) {
 
             $this->forget($uri, $query);
 
@@ -191,7 +202,7 @@ class FileCache implements CacheInterface
      * @param string $uri
      * @param string $query
      *
-     * @return mixed
+     * @return void
      */
     public function forget(string $uri, string $query = '')
     {

@@ -23,30 +23,36 @@
 use Monolog\Logger;
 use org\bovigo\vfs\vfsStream;
 use Seat\Eseye\Configuration;
-use Seat\Eseye\Log\FileLogger;
+use Seat\Eseye\Log\RotatingFileLogger;
 
-class FileLoggerTest extends PHPUnit_Framework_TestCase
+class RotatingFileLoggerTest extends PHPUnit_Framework_TestCase
 {
 
     protected $root;
 
     protected $logger;
 
+    protected $logfile_name;
+
     public function setUp()
     {
 
         // Set the file cache path in the config singleton
-        $this->root = vfsStream::setup('logs/');
-        Configuration::getInstance()->logfile_location = vfsStream::url('logs/');
+        $this->root = vfsStream::setup('logs');
+        Configuration::getInstance()->logfile_location = $this->root->url();
+        Configuration::getInstance()->logger_level = 'info';
 
-        $this->logger = new FileLogger;
+        $this->logger = new RotatingFileLogger;
+
+        # Shitty hack to get the filename to expect. Format: eseye-2018-05-06.log
+        $this->logfile_name = 'eseye-' . date('Y-m-d') . '.log';
     }
 
     public function testFileLoggerWritesLogInfo()
     {
 
         $this->logger->log('foo');
-        $logfile_content = $this->root->getChild('eseye.log')->getContent();
+        $logfile_content = $this->root->getChild($this->logfile_name)->getContent();
 
         $this->assertContains('eseye.INFO: foo', $logfile_content);
     }
@@ -55,7 +61,7 @@ class FileLoggerTest extends PHPUnit_Framework_TestCase
     {
 
         $this->logger->debug('foo');
-        $logfile_content = $this->root->getChild('eseye.log');
+        $logfile_content = $this->root->getChild($this->logfile_name);
 
         $this->assertNull($logfile_content);
     }
@@ -66,10 +72,10 @@ class FileLoggerTest extends PHPUnit_Framework_TestCase
         Configuration::getInstance()->logger_level = Logger::DEBUG;
 
         // Init a new logger with the updated config
-        $logger = new FileLogger;
+        $logger = new RotatingFileLogger;
 
         $logger->debug('foo');
-        $logfile_content = $this->root->getChild('eseye.log')->getContent();
+        $logfile_content = $this->root->getChild($this->logfile_name)->getContent();
 
         $this->assertContains('eseye.DEBUG: foo', $logfile_content);
     }
@@ -78,7 +84,7 @@ class FileLoggerTest extends PHPUnit_Framework_TestCase
     {
 
         $this->logger->warning('foo');
-        $logfile_content = $this->root->getChild('eseye.log')->getContent();
+        $logfile_content = $this->root->getChild($this->logfile_name)->getContent();
 
         $this->assertContains('eseye.WARNING: foo', $logfile_content);
     }
@@ -87,7 +93,7 @@ class FileLoggerTest extends PHPUnit_Framework_TestCase
     {
 
         $this->logger->error('foo');
-        $logfile_content = $this->root->getChild('eseye.log')->getContent();
+        $logfile_content = $this->root->getChild($this->logfile_name)->getContent();
 
         $this->assertContains('eseye.ERROR: foo', $logfile_content);
     }

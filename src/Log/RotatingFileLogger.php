@@ -22,49 +22,85 @@
 
 namespace Seat\Eseye\Log;
 
+use Monolog\Formatter\LineFormatter;
+use Monolog\Handler\RotatingFileHandler;
+use Monolog\Logger;
+use Seat\Eseye\Configuration;
+
 /**
- * Class NullLogger.
+ * Class RotatingFileLogger.
  * @package Seat\Eseye\Log
  */
-class NullLogger implements LogInterface
+class RotatingFileLogger implements LogInterface
 {
+    /**
+     * @var \Monolog\Logger
+     */
+    protected $logger;
+
+    /**
+     * FileLogger constructor.
+     * @throws \Exception
+     */
+    public function __construct()
+    {
+
+        // Get the configuration values
+        $configuration = Configuration::getInstance();
+
+        $formatter = new LineFormatter("[%datetime%] %channel%.%level_name%: %message%\n");
+        $stream = new RotatingFileHandler(
+            rtrim($configuration->logfile_location, '/') . '/eseye.log',
+            $configuration->log_max_files,
+            $configuration->logger_level
+        );
+        $stream->setFormatter($formatter);
+
+        $this->logger = new Logger('eseye');
+        $this->logger->pushHandler($stream);
+    }
+
     /**
      * @param string $message
      *
-     * @return mixed
+     * @return mixed|void
      */
     public function log(string $message)
     {
 
+        $this->logger->addInfo($message);
     }
 
     /**
      * @param string $message
      *
-     * @return mixed
+     * @return mixed|void
      */
     public function debug(string $message)
     {
 
+        $this->logger->addDebug($message);
     }
 
     /**
      * @param string $message
      *
-     * @return mixed
+     * @return mixed|void
      */
     public function warning(string $message)
     {
 
+        $this->logger->addWarning($message);
     }
 
     /**
      * @param string $message
      *
-     * @return mixed
+     * @return mixed|void
      */
     public function error(string $message)
     {
 
+        $this->logger->addError($message);
     }
 }
